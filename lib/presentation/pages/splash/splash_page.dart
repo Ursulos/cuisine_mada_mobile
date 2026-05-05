@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
+import 'package:cuisine_mada/presentation/pages/main_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -29,6 +30,16 @@ class _SplashPageState extends State<SplashPage>
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
     _controller.forward();
+
+    // Après 2 secondes, aller vers la page principale
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainPage()),
+        );
+      }
+    });
   }
 
   @override
@@ -49,7 +60,6 @@ class _SplashPageState extends State<SplashPage>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
                 Container(
                   width: 110,
                   height: 110,
@@ -66,8 +76,6 @@ class _SplashPageState extends State<SplashPage>
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Nom de l'app
                 Text(
                   'Cuisine Mada',
                   style: GoogleFonts.nunito(
@@ -77,8 +85,6 @@ class _SplashPageState extends State<SplashPage>
                   ),
                 ),
                 const SizedBox(height: 8),
-
-                // Slogan
                 Text(
                   'Découvrez des recettes du jour',
                   style: GoogleFonts.nunito(
@@ -87,7 +93,6 @@ class _SplashPageState extends State<SplashPage>
                     color: AppColors.textMuted,
                   ),
                 ),
-                const SizedBox(height: 8),
                 Text(
                   'adaptées à votre budget & famille',
                   style: GoogleFonts.nunito(
@@ -97,8 +102,6 @@ class _SplashPageState extends State<SplashPage>
                   ),
                 ),
                 const SizedBox(height: 48),
-
-                // Indicateur de chargement
                 SizedBox(
                   width: 32,
                   height: 32,
@@ -115,10 +118,7 @@ class _SplashPageState extends State<SplashPage>
                     color: AppColors.textLight,
                   ),
                 ),
-
                 const SizedBox(height: 80),
-
-                // Bas de page
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -141,7 +141,9 @@ class _SplashPageState extends State<SplashPage>
       decoration: BoxDecoration(
         color: AppColors.secondaryLight,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.secondaryMid.withOpacity(0.3)),
+        border: Border.all(
+          color: AppColors.secondaryMid.withOpacity(0.3),
+        ),
       ),
       child: Text(
         label,
