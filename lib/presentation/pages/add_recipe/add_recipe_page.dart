@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
 import 'package:cuisine_mada/core/constants/app_dimensions.dart';
 
@@ -20,8 +22,13 @@ class _AddRecipePageState extends State<AddRecipePage> {
   bool _isHalal = false;
   bool _isVegetarian = false;
   bool _isSubmitting = false;
+  XFile? _imageFile;
+  Uint8List? _imageBytes;
+  final ImagePicker _picker = ImagePicker();
 
-  final List<String> _units = ['g', 'kg', 'ml', 'litre', 'pièce(s)', 'c.à.s', 'c.à.c'];
+  final List<String> _units = [
+    'g', 'kg', 'ml', 'litre', 'pièce(s)', 'c.à.s', 'c.à.c'
+  ];
 
   final List<Map<String, dynamic>> _ingredients = [
     {
@@ -41,8 +48,10 @@ class _AddRecipePageState extends State<AddRecipePage> {
   double get _totalPrice {
     double total = 0;
     for (final ing in _ingredients) {
-      final qty = double.tryParse(ing['quantity'].text) ?? 0;
-      final price = double.tryParse(ing['pricePerUnit'].text) ?? 0;
+      final qty = double.tryParse(
+              (ing['quantity'] as TextEditingController).text) ?? 0;
+      final price = double.tryParse(
+              (ing['pricePerUnit'] as TextEditingController).text) ?? 0;
       final unit = ing['unit'] as String;
       if (unit == 'kg' || unit == 'litre') {
         total += (qty / 1000) * price;
@@ -60,19 +69,117 @@ class _AddRecipePageState extends State<AddRecipePage> {
     return (_totalPrice / _basePersons) * persons;
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descController.dispose();
-    _timeController.dispose();
-    _personsController.dispose();
-    _stepsController.dispose();
-    for (final ing in _ingredients) {
-      (ing['name'] as TextEditingController).dispose();
-      (ing['quantity'] as TextEditingController).dispose();
-      (ing['pricePerUnit'] as TextEditingController).dispose();
+  Future<void> _pickImage(ImageSource source) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      maxWidth: 800,
+      maxHeight: 600,
+      imageQuality: 85,
+    );
+    if (picked != null) {
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        _imageFile = picked;
+        _imageBytes = bytes;
+      });
     }
-    super.dispose();
+  }
+
+  void _showImagePicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Ajouter une photo',
+                style: GoogleFonts.nunito(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage(ImageSource.camera);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.primaryMid),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('📷',
+                                style: TextStyle(fontSize: 32)),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Caméra',
+                              style: GoogleFonts.nunito(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage(ImageSource.gallery);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondaryLight,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.secondaryMid.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('🖼️',
+                                style: TextStyle(fontSize: 32)),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Galerie',
+                              style: GoogleFonts.nunito(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.secondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _addIngredient() {
@@ -151,6 +258,21 @@ class _AddRecipePageState extends State<AddRecipePage> {
   }
 
   @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    _timeController.dispose();
+    _personsController.dispose();
+    _stepsController.dispose();
+    for (final ing in _ingredients) {
+      (ing['name'] as TextEditingController).dispose();
+      (ing['quantity'] as TextEditingController).dispose();
+      (ing['pricePerUnit'] as TextEditingController).dispose();
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -198,13 +320,16 @@ class _AddRecipePageState extends State<AddRecipePage> {
             children: [
               _buildPendingNote(),
               const SizedBox(height: 16),
+              _buildPhotoSection(),
+              const SizedBox(height: 20),
               _buildSectionTitle('📝 Informations générales'),
               const SizedBox(height: 12),
               _buildTextField(
                 controller: _nameController,
                 label: 'Nom de la recette *',
                 hint: 'Ex : Romazava traditionnel...',
-                validator: (v) => v!.isEmpty ? 'Le nom est obligatoire' : null,
+                validator: (v) =>
+                    v!.isEmpty ? 'Le nom est obligatoire' : null,
               ),
               const SizedBox(height: 12),
               _buildTextField(
@@ -221,7 +346,8 @@ class _AddRecipePageState extends State<AddRecipePage> {
                       label: 'Temps (min) *',
                       hint: '30',
                       keyboardType: TextInputType.number,
-                      validator: (v) => v!.isEmpty ? 'Obligatoire' : null,
+                      validator: (v) =>
+                          v!.isEmpty ? 'Obligatoire' : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -231,7 +357,8 @@ class _AddRecipePageState extends State<AddRecipePage> {
                       label: 'Personnes de base *',
                       hint: '4',
                       keyboardType: TextInputType.number,
-                      validator: (v) => v!.isEmpty ? 'Obligatoire' : null,
+                      validator: (v) =>
+                          v!.isEmpty ? 'Obligatoire' : null,
                       onChanged: (_) => setState(() {}),
                     ),
                   ),
@@ -275,7 +402,8 @@ class _AddRecipePageState extends State<AddRecipePage> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppColors.primaryLight,
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusM),
                     border: Border.all(color: AppColors.primaryMid),
                   ),
                   child: Row(
@@ -304,7 +432,8 @@ class _AddRecipePageState extends State<AddRecipePage> {
               _buildTextField(
                 controller: _stepsController,
                 label: 'Étapes *',
-                hint: '1. Faire revenir l\'oignon...\n2. Ajouter la viande...\n3. ...',
+                hint:
+                    '1. Faire revenir l\'oignon...\n2. Ajouter la viande...\n3. ...',
                 maxLines: 6,
                 validator: (v) =>
                     v!.isEmpty ? 'Les étapes sont obligatoires' : null,
@@ -341,6 +470,89 @@ class _AddRecipePageState extends State<AddRecipePage> {
     );
   }
 
+  Widget _buildPhotoSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('📸 Photo de la recette'),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: _showImagePicker,
+          child: Container(
+            width: double.infinity,
+            height: 180,
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius:
+                  BorderRadius.circular(AppDimensions.radiusL),
+              border: Border.all(
+                color: _imageBytes != null
+                    ? AppColors.primary
+                    : AppColors.border,
+              ),
+            ),
+            child: _imageBytes != null
+                ? ClipRRect(
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusL),
+                    child: Image.memory(
+                      _imageBytes!,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('📷',
+                          style: TextStyle(fontSize: 40)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Appuyez pour ajouter une photo',
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      Text(
+                        'Caméra ou Galerie',
+                        style: GoogleFonts.nunito(
+                          fontSize: 12,
+                          color: AppColors.textLight,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        if (_imageBytes != null) ...[
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => setState(() {
+              _imageFile = null;
+              _imageBytes = null;
+            }),
+            child: Row(
+              children: [
+                const Icon(Icons.close_rounded,
+                    color: Color(0xFFE53935), size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  'Supprimer la photo',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    color: const Color(0xFFE53935),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildPriceSummary() {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -363,7 +575,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
           const SizedBox(height: 10),
           _priceRow('Pour $_basePersons personnes (base)',
               '${_totalPrice.toStringAsFixed(0)} Ar'),
-          const SizedBox(height: 4),
           _priceRow('Par personne',
               '${(_basePersons > 0 ? _totalPrice / _basePersons : 0).toStringAsFixed(0)} Ar'),
           const Divider(height: 16),
@@ -386,21 +597,15 @@ class _AddRecipePageState extends State<AddRecipePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.nunito(
-              fontSize: 12,
-              color: AppColors.textMuted,
-            ),
-          ),
-          Text(
-            price,
-            style: GoogleFonts.nunito(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: AppColors.primary,
-            ),
-          ),
+          Text(label,
+              style: GoogleFonts.nunito(
+                  fontSize: 12, color: AppColors.textMuted)),
+          Text(price,
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primary,
+              )),
         ],
       ),
     );
@@ -607,10 +812,12 @@ class _AddRecipePageState extends State<AddRecipePage> {
                   color: AppColors.textDark,
                 ),
                 items: _units
-                    .map((u) => DropdownMenuItem(value: u, child: Text(u)))
+                    .map((u) => DropdownMenuItem(
+                        value: u, child: Text(u)))
                     .toList(),
                 onChanged: (val) {
-                  setState(() => _ingredients[index]['unit'] = val!);
+                  setState(
+                      () => _ingredients[index]['unit'] = val!);
                 },
               ),
               const SizedBox(width: 8),

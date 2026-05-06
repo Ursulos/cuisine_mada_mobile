@@ -21,7 +21,7 @@ dependencies:
   equatable: ^2.0.5
   dartz: ^0.10.1
   intl: ^0.18.1
-  image_picker: ^1.0.4
+  image_picker: ^1.2.2
   connectivity_plus: ^5.0.2
   hive_flutter: ^1.1.0
 

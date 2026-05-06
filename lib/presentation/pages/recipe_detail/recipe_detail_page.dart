@@ -12,6 +12,42 @@ class RecipeDetailPage extends StatefulWidget {
 
 class _RecipeDetailPageState extends State<RecipeDetailPage> {
   bool _isFavorite = false;
+  int _persons = 4;
+
+  // Prix de base pour 4 personnes
+  final int _basePricePerPerson = 3000;
+  final int _basePersons = 4;
+
+  final List<Map<String, dynamic>> _ingredients = [
+    {'name': 'Riz (vary)', 'qty': 400, 'unit': 'g', 'pricePerKg': 5000},
+    {'name': 'Viande de porc', 'qty': 300, 'unit': 'g', 'pricePerKg': 20000},
+    {'name': 'Brèdes mafanes', 'qty': 200, 'unit': 'g', 'pricePerKg': 7500},
+    {'name': 'Oignon', 'qty': 2, 'unit': 'pièce(s)', 'pricePerKg': 250},
+    {'name': 'Tomate', 'qty': 2, 'unit': 'pièce(s)', 'pricePerKg': 400},
+    {'name': 'Huile, sel, poivre', 'qty': 1, 'unit': 'pièce(s)', 'pricePerKg': 1200},
+  ];
+
+  double get _totalPrice {
+    return _basePricePerPerson * _persons.toDouble();
+  }
+
+  double _ingredientPrice(Map<String, dynamic> ing) {
+    final baseQty = ing['qty'] as int;
+    final pricePerUnit = ing['pricePerKg'] as int;
+    final unit = ing['unit'] as String;
+    double basePrice = 0;
+    if (unit == 'g') {
+      basePrice = (baseQty / 1000) * pricePerUnit;
+    } else {
+      basePrice = baseQty * pricePerUnit.toDouble();
+    }
+    return (basePrice / _basePersons) * _persons;
+  }
+
+  double _adjustedQty(Map<String, dynamic> ing) {
+    final baseQty = ing['qty'] as int;
+    return (baseQty / _basePersons) * _persons;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +60,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildPersonsSelector(),
                 _buildMetaRow(),
                 _buildDivider(),
                 _buildIngredients(),
@@ -52,8 +89,10 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             color: AppColors.white.withOpacity(0.9),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(Icons.arrow_back_rounded,
-              color: AppColors.textDark),
+          child: const Icon(
+            Icons.arrow_back_rounded,
+            color: AppColors.textDark,
+          ),
         ),
       ),
       actions: [
@@ -121,22 +160,105 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     );
   }
 
+  Widget _buildPersonsSelector() {
+    return Container(
+      margin: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+        border: Border.all(color: AppColors.primaryMid),
+      ),
+      child: Row(
+        children: [
+          const Text('👥', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Nombre de personnes',
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              if (_persons > 1) setState(() => _persons--);
+            },
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.primaryMid),
+              ),
+              child: const Icon(
+                Icons.remove_rounded,
+                color: AppColors.primary,
+                size: 18,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Text(
+              '$_persons',
+              style: GoogleFonts.nunito(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              if (_persons < 20) setState(() => _persons++);
+            },
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.add_rounded,
+                color: AppColors.white,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMetaRow() {
     return Padding(
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.paddingL,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _metaChip(Icons.monetization_on_rounded, '12 000 Ar',
-                  AppColors.primaryLight, AppColors.primary),
+              _metaChip(
+                Icons.monetization_on_rounded,
+                '${_totalPrice.toStringAsFixed(0)} Ar',
+                AppColors.primaryLight,
+                AppColors.primary,
+              ),
               const SizedBox(width: 8),
-              _metaChip(Icons.people_rounded, '4 personnes',
-                  AppColors.secondaryLight, AppColors.secondary),
-              const SizedBox(width: 8),
-              _metaChip(Icons.timer_rounded, '30 min',
-                  const Color(0xFFE3F2FD), const Color(0xFF1565C0)),
+              _metaChip(
+                Icons.timer_rounded,
+                '30 min',
+                const Color(0xFFE3F2FD),
+                const Color(0xFF1565C0),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -149,6 +271,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   const Color(0xFF880E4F)),
             ],
           ),
+          const SizedBox(height: 12),
         ],
       ),
     );
@@ -199,21 +322,14 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   Widget _buildDivider() {
     return Container(
       height: 1,
-      margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingL),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.paddingL,
+      ),
       color: AppColors.divider,
     );
   }
 
   Widget _buildIngredients() {
-    final ingredients = [
-      {'name': 'Riz (vary)', 'qty': '400 g', 'price': '2 000 Ar'},
-      {'name': 'Viande de porc', 'qty': '300 g', 'price': '6 000 Ar'},
-      {'name': 'Brèdes mafanes (anana)', 'qty': '200 g', 'price': '1 500 Ar'},
-      {'name': 'Oignon', 'qty': '2 pcs', 'price': '500 Ar'},
-      {'name': 'Tomate', 'qty': '2 pcs', 'price': '800 Ar'},
-      {'name': 'Huile, sel, poivre', 'qty': '', 'price': '1 200 Ar'},
-    ];
-
     return Padding(
       padding: const EdgeInsets.all(AppDimensions.paddingL),
       child: Column(
@@ -227,12 +343,16 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               color: AppColors.textDark,
             ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            'Quantités ajustées pour $_persons personne${_persons > 1 ? 's' : ''}',
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: AppColors.textMuted,
+            ),
+          ),
           const SizedBox(height: 12),
-          ...ingredients.map((ing) => _ingredientRow(
-                ing['name']!,
-                ing['qty']!,
-                ing['price']!,
-              )),
+          ..._ingredients.map((ing) => _ingredientRow(ing)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
@@ -244,7 +364,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total estimé',
+                  'Total pour $_persons pers.',
                   style: GoogleFonts.nunito(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
@@ -252,7 +372,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   ),
                 ),
                 Text(
-                  '12 000 Ar',
+                  '${_totalPrice.toStringAsFixed(0)} Ar',
                   style: GoogleFonts.nunito(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -267,7 +387,11 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     );
   }
 
-  Widget _ingredientRow(String name, String qty, String price) {
+  Widget _ingredientRow(Map<String, dynamic> ing) {
+    final adjustedQty = _adjustedQty(ing);
+    final price = _ingredientPrice(ing);
+    final unit = ing['unit'] as String;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
@@ -279,24 +403,25 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         children: [
           Expanded(
             child: Text(
-              name,
+              ing['name'],
               style: GoogleFonts.nunito(
                 fontSize: 13,
                 color: AppColors.textDark,
               ),
             ),
           ),
-          if (qty.isNotEmpty)
-            Text(
-              qty,
-              style: GoogleFonts.nunito(
-                fontSize: 12,
-                color: AppColors.textMuted,
-              ),
+          Text(
+            unit == 'g' && adjustedQty >= 1000
+                ? '${(adjustedQty / 1000).toStringAsFixed(1)} kg'
+                : '${adjustedQty.toStringAsFixed(unit == 'g' ? 0 : 1)} $unit',
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: AppColors.textMuted,
             ),
+          ),
           const SizedBox(width: 12),
           Text(
-            price,
+            '${price.toStringAsFixed(0)} Ar',
             style: GoogleFonts.nunito(
               fontSize: 12,
               fontWeight: FontWeight.w800,
