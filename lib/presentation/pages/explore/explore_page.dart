@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
 import 'package:cuisine_mada/core/constants/app_dimensions.dart';
+import 'package:cuisine_mada/data/datasources/remote/recipe_remote_datasource.dart';
+import 'package:cuisine_mada/data/models/recipe_model.dart';
 import 'package:cuisine_mada/presentation/pages/recipe_detail/recipe_detail_page.dart';
 
 class ExplorePage extends StatefulWidget {
@@ -12,6 +14,9 @@ class ExplorePage extends StatefulWidget {
 }
 
 class _ExplorePageState extends State<ExplorePage> {
+  final RecipeRemoteDatasource _datasource = RecipeRemoteDatasource();
+  List<RecipeModel> _allRecipes = [];
+  bool _isLoading = true;
   String _activeFilter = 'Tout';
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -25,97 +30,36 @@ class _ExplorePageState extends State<ExplorePage> {
     {'label': 'Familial', 'icon': '👨‍👩‍👧'},
   ];
 
-  final List<Map<String, dynamic>> _recipes = [
-    {
-      'emoji': '🍛',
-      'name': 'Henakisoa sy anana',
-      'sub': 'Riz · Porc · Brèdes',
-      'price': '12 000 Ar',
-      'persons': '4 pers.',
-      'time': '30 min',
-      'tags': ['Familial'],
-      'isFavorite': true,
-      'creator': null,
-    },
-    {
-      'emoji': '🥣',
-      'name': 'Lasopy sy anana',
-      'sub': 'Soupe · Légumes · Rapide',
-      'price': '8 500 Ar',
-      'persons': '6 pers.',
-      'time': '20 min',
-      'tags': ['Rapide', 'Économique'],
-      'isFavorite': false,
-      'creator': 'Haja',
-    },
-    {
-      'emoji': '🍲',
-      'name': 'Romazava',
-      'sub': 'Viande · Brèdes · Traditionnel',
-      'price': '10 000 Ar',
-      'persons': '5 pers.',
-      'time': '45 min',
-      'tags': ['Familial'],
-      'isFavorite': false,
-      'creator': null,
-    },
-    {
-      'emoji': '🐔',
-      'name': 'Lasopy akoho',
-      'sub': 'Soupe de poulet · Halal',
-      'price': '9 000 Ar',
-      'persons': '4 pers.',
-      'time': '25 min',
-      'tags': ['Halal', 'Rapide'],
-      'isFavorite': false,
-      'creator': 'Fatouma',
-    },
-    {
-      'emoji': '🫘',
-      'name': 'Ravitoto sy voanjobory',
-      'sub': 'Manioc · Haricots · Végétarien',
-      'price': '6 500 Ar',
-      'persons': '4 pers.',
-      'time': '40 min',
-      'tags': ['Végétarien', 'Économique'],
-      'isFavorite': false,
-      'creator': null,
-    },
-    {
-      'emoji': '🥩',
-      'name': 'Akoho sy voanio',
-      'sub': 'Poulet · Coco · Halal',
-      'price': '14 000 Ar',
-      'persons': '4 pers.',
-      'time': '50 min',
-      'tags': ['Halal', 'Familial'],
-      'isFavorite': false,
-      'creator': 'Aminata',
-    },
-    {
-      'emoji': '🍃',
-      'name': 'Vary amin\'anana',
-      'sub': 'Riz · Légumes · Simple',
-      'price': '4 000 Ar',
-      'persons': '3 pers.',
-      'time': '15 min',
-      'tags': ['Végétarien', 'Rapide', 'Économique'],
-      'isFavorite': false,
-      'creator': null,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadRecipes();
+  }
 
-  List<Map<String, dynamic>> get _filteredRecipes {
-    return _recipes.where((recipe) {
+  Future<void> _loadRecipes() async {
+    setState(() => _isLoading = true);
+    try {
+      final recipes = await _datasource.getAllRecipes();
+      setState(() {
+        _allRecipes = recipes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  List<RecipeModel> get _filteredRecipes {
+    return _allRecipes.where((recipe) {
       final matchesFilter = _activeFilter == 'Tout' ||
-          (recipe['tags'] as List).contains(_activeFilter);
+          (_activeFilter == 'Halal' && recipe.isHalal) ||
+          (_activeFilter == 'Végétarien' && recipe.isVegetarian) ||
+          recipe.tags.contains(_activeFilter);
       final matchesSearch = _searchQuery.isEmpty ||
-          recipe['name']
-              .toString()
+          recipe.name
               .toLowerCase()
               .contains(_searchQuery.toLowerCase()) ||
-          recipe['sub']
-              .toString()
+          recipe.description
               .toLowerCase()
               .contains(_searchQuery.toLowerCase());
       return matchesFilter && matchesSearch;
@@ -139,7 +83,15 @@ class _ExplorePageState extends State<ExplorePage> {
             _buildHeader(),
             _buildFilters(),
             _buildResultCount(),
-            Expanded(child: _buildRecipeList()),
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : _buildRecipeList(),
+            ),
           ],
         ),
       ),
@@ -174,7 +126,8 @@ class _ExplorePageState extends State<ExplorePage> {
             ),
             child: TextField(
               controller: _searchController,
-              onChanged: (value) => setState(() => _searchQuery = value),
+              onChanged: (value) =>
+                  setState(() => _searchQuery = value),
               style: GoogleFonts.nunito(
                 fontSize: 14,
                 color: AppColors.textDark,
@@ -228,14 +181,22 @@ class _ExplorePageState extends State<ExplorePage> {
           final filter = _filters[index];
           final isActive = _activeFilter == filter['label'];
           return GestureDetector(
-            onTap: () => setState(() => _activeFilter = filter['label']!),
+            onTap: () =>
+                setState(() => _activeFilter = filter['label']!),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 8,
+              ),
               decoration: BoxDecoration(
-                color: isActive ? AppColors.primary : AppColors.white,
+                color: isActive
+                    ? AppColors.primary
+                    : AppColors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isActive ? AppColors.primary : AppColors.border,
+                  color: isActive
+                      ? AppColors.primary
+                      : AppColors.border,
                 ),
               ),
               child: Text(
@@ -243,7 +204,9 @@ class _ExplorePageState extends State<ExplorePage> {
                 style: GoogleFonts.nunito(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: isActive ? AppColors.white : AppColors.textDark,
+                  color: isActive
+                      ? AppColors.white
+                      : AppColors.textDark,
                 ),
               ),
             ),
@@ -302,23 +265,30 @@ class _ExplorePageState extends State<ExplorePage> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimensions.paddingL,
-        8,
-        AppDimensions.paddingL,
-        80,
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _loadRecipes,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(
+          AppDimensions.paddingL,
+          8,
+          AppDimensions.paddingL,
+          80,
+        ),
+        itemCount: recipes.length,
+        itemBuilder: (context, index) =>
+            _buildRecipeRow(context, recipes[index]),
       ),
-      itemCount: recipes.length,
-      itemBuilder: (context, index) => _buildRecipeRow(context, recipes[index]),
     );
   }
 
-  Widget _buildRecipeRow(BuildContext context, Map<String, dynamic> recipe) {
+  Widget _buildRecipeRow(BuildContext context, RecipeModel recipe) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const RecipeDetailPage()),
+        MaterialPageRoute(
+          builder: (_) => RecipeDetailPage(recipe: recipe),
+        ),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -339,7 +309,7 @@ class _ExplorePageState extends State<ExplorePage> {
               ),
               child: Center(
                 child: Text(
-                  recipe['emoji'],
+                  recipe.emoji,
                   style: const TextStyle(fontSize: 32),
                 ),
               ),
@@ -350,7 +320,7 @@ class _ExplorePageState extends State<ExplorePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    recipe['name'],
+                    recipe.name,
                     style: GoogleFonts.nunito(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -358,7 +328,7 @@ class _ExplorePageState extends State<ExplorePage> {
                     ),
                   ),
                   Text(
-                    recipe['sub'],
+                    recipe.description,
                     style: GoogleFonts.nunito(
                       fontSize: 11,
                       color: AppColors.textMuted,
@@ -368,7 +338,7 @@ class _ExplorePageState extends State<ExplorePage> {
                   Row(
                     children: [
                       Text(
-                        recipe['price'],
+                        '${recipe.estimatedCost} Ar',
                         style: GoogleFonts.nunito(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
@@ -377,7 +347,7 @@ class _ExplorePageState extends State<ExplorePage> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '${recipe['persons']} · ${recipe['time']}',
+                        '${recipe.basePersons} pers. · ${recipe.preparationMinutes} min',
                         style: GoogleFonts.nunito(
                           fontSize: 11,
                           color: AppColors.textMuted,
@@ -385,7 +355,7 @@ class _ExplorePageState extends State<ExplorePage> {
                       ),
                     ],
                   ),
-                  if (recipe['creator'] != null) ...[
+                  if (recipe.createdByUserName != null) ...[
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -397,7 +367,7 @@ class _ExplorePageState extends State<ExplorePage> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '✍️ Créé par ${recipe['creator']}',
+                        '✍️ Créé par ${recipe.createdByUserName}',
                         style: GoogleFonts.nunito(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -409,11 +379,9 @@ class _ExplorePageState extends State<ExplorePage> {
                 ],
               ),
             ),
-            Icon(
-              recipe['isFavorite']
-                  ? Icons.favorite_rounded
-                  : Icons.favorite_border_rounded,
-              color: recipe['isFavorite'] ? Colors.red : AppColors.textLight,
+            const Icon(
+              Icons.favorite_border_rounded,
+              color: AppColors.textLight,
               size: 20,
             ),
           ],

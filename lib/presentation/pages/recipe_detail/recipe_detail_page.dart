@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
 import 'package:cuisine_mada/core/constants/app_dimensions.dart';
+import 'package:cuisine_mada/data/models/recipe_model.dart';
 
 class RecipeDetailPage extends StatefulWidget {
-  const RecipeDetailPage({super.key});
+  final RecipeModel? recipe;
+
+  const RecipeDetailPage({super.key, this.recipe});
 
   @override
   State<RecipeDetailPage> createState() => _RecipeDetailPageState();
@@ -14,7 +17,6 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   bool _isFavorite = false;
   int _persons = 4;
 
-  // Prix de base pour 4 personnes
   final int _basePricePerPerson = 3000;
   final int _basePersons = 4;
 
@@ -50,18 +52,28 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.recipe != null) {
+      _persons = widget.recipe!.basePersons;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final recipe = widget.recipe;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          _buildAppBar(context),
+          _buildAppBar(context, recipe),
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildPersonsSelector(),
-                _buildMetaRow(),
+                _buildMetaRow(recipe),
                 _buildDivider(),
                 _buildIngredients(),
                 _buildDivider(),
@@ -76,7 +88,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, RecipeModel? recipe) {
     return SliverAppBar(
       expandedHeight: 260,
       pinned: true,
@@ -127,8 +139,11 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 ),
               ),
             ),
-            const Center(
-              child: Text('🍛', style: TextStyle(fontSize: 100)),
+            Center(
+              child: Text(
+                recipe?.emoji ?? '🍛',
+                style: const TextStyle(fontSize: 100),
+              ),
             ),
             Positioned(
               bottom: 16,
@@ -137,7 +152,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Henakisoa sy anana',
+                    recipe?.name ?? 'Recette',
                     style: GoogleFonts.nunito(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
@@ -145,12 +160,33 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                     ),
                   ),
                   Text(
-                    'Riz · Viande · Légumes',
+                    recipe?.description ?? '',
                     style: GoogleFonts.nunito(
                       fontSize: 13,
                       color: AppColors.white.withOpacity(0.8),
                     ),
                   ),
+                  if (recipe?.createdByUserName != null) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '✍️ Créé par ${recipe!.createdByUserName}',
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -236,7 +272,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     );
   }
 
-  Widget _buildMetaRow() {
+  Widget _buildMetaRow(RecipeModel? recipe) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.paddingL,
@@ -255,20 +291,31 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               const SizedBox(width: 8),
               _metaChip(
                 Icons.timer_rounded,
-                '30 min',
+                '${recipe?.preparationMinutes ?? 30} min',
                 const Color(0xFFE3F2FD),
                 const Color(0xFF1565C0),
               ),
+              if (recipe?.isHalal == true) ...[
+                const SizedBox(width: 8),
+                _metaChip(
+                  Icons.verified_rounded,
+                  'Halal',
+                  AppColors.secondaryLight,
+                  AppColors.secondary,
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 6,
             children: [
-              _tag('Facile', AppColors.tagEasyBg, AppColors.tagEasyText),
-              _tag('Économique', AppColors.tagEcoBg, AppColors.tagEcoText),
-              _tag('Riche en saveurs', const Color(0xFFFCE4EC),
-                  const Color(0xFF880E4F)),
+              if (recipe != null)
+                ...recipe.tags.map((tag) => _tag(
+                      tag,
+                      AppColors.tagEasyBg,
+                      AppColors.tagEasyText,
+                    )),
             ],
           ),
           const SizedBox(height: 12),
@@ -519,7 +566,9 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               SnackBar(
                 content: Text(
                   '✅ Ajouté à votre historique !',
-                  style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+                  style: GoogleFonts.nunito(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 backgroundColor: AppColors.secondary,
                 behavior: SnackBarBehavior.floating,
