@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
 import 'package:cuisine_mada/core/constants/app_dimensions.dart';
+import 'package:cuisine_mada/presentation/pages/auth/login_page.dart';
 
 class PreferencesPage extends StatefulWidget {
   const PreferencesPage({super.key});
@@ -18,10 +20,71 @@ class _PreferencesPageState extends State<PreferencesPage> {
   final TextEditingController _excludeController = TextEditingController();
   final List<String> _excludedIngredients = ['Voanjobory', 'Sakamalaho'];
 
+  User? get _user => FirebaseAuth.instance.currentUser;
+
   @override
   void dispose() {
     _excludeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _logout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusL),
+        ),
+        title: Text(
+          'Déconnexion',
+          style: GoogleFonts.nunito(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textDark,
+          ),
+        ),
+        content: Text(
+          'Voulez-vous vraiment vous déconnecter ?',
+          style: GoogleFonts.nunito(
+            fontSize: 14,
+            color: AppColors.textMuted,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Annuler',
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE53935),
+            ),
+            child: Text(
+              'Déconnecter',
+              style: GoogleFonts.nunito(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+          (route) => false,
+        );
+      }
+    }
   }
 
   @override
@@ -35,7 +98,9 @@ class _PreferencesPageState extends State<PreferencesPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              _buildProfileCard(),
+              const SizedBox(height: 14),
               _buildBudgetCard(),
               const SizedBox(height: 14),
               _buildPersonsCard(),
@@ -45,6 +110,8 @@ class _PreferencesPageState extends State<PreferencesPage> {
               _buildExcludeCard(),
               const SizedBox(height: 24),
               _buildGenerateButton(context),
+              const SizedBox(height: 14),
+              _buildLogoutButton(),
               const SizedBox(height: 80),
             ],
           ),
@@ -73,6 +140,89 @@ class _PreferencesPageState extends State<PreferencesPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildProfileCard() {
+    final name = _user?.displayName ?? 'Utilisateur';
+    final email = _user?.email ?? '';
+    final initials = name.isNotEmpty
+        ? name.trim().split(' ').map((e) => e[0]).take(2).join().toUpperCase()
+        : 'U';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusL),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.primaryMid),
+            ),
+            child: Center(
+              child: Text(
+                initials,
+                style: GoogleFonts.nunito(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                Text(
+                  email,
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryLight,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '✅ Compte vérifié',
+                    style: GoogleFonts.nunito(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.secondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -333,8 +483,8 @@ class _PreferencesPageState extends State<PreferencesPage> {
           ),
           const SizedBox(width: 6),
           GestureDetector(
-            onTap: () => setState(
-                () => _excludedIngredients.remove(label)),
+            onTap: () =>
+                setState(() => _excludedIngredients.remove(label)),
             child: const Icon(
               Icons.close_rounded,
               size: 14,
@@ -372,6 +522,36 @@ class _PreferencesPageState extends State<PreferencesPage> {
             fontSize: 15,
             fontWeight: FontWeight.w800,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: AppDimensions.buttonHeight,
+      child: ElevatedButton(
+        onPressed: _logout,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFFEBEE),
+          foregroundColor: const Color(0xFFE53935),
+          elevation: 0,
+          side: const BorderSide(color: Color(0xFFEF9A9A)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.logout_rounded, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Se déconnecter',
+              style: GoogleFonts.nunito(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
         ),
       ),
     );

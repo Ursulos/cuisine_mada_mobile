@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
+import 'package:cuisine_mada/presentation/pages/auth/login_page.dart';
 import 'package:cuisine_mada/presentation/pages/main_page.dart';
 
 class SplashPage extends StatefulWidget {
@@ -31,13 +33,20 @@ class _SplashPageState extends State<SplashPage>
     );
     _controller.forward();
 
-    // Après 2 secondes, aller vers la page principale
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainPage()),
-        );
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainPage()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          );
+        }
       }
     });
   }

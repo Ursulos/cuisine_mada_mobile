@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "800541664032",
+    "project_id": "cuisine-mada",
+    "storage_bucket": "cuisine-mada.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:800541664032:android:906be0f7f0d3789cd7ad45",
+        "android_client_info": {
+          "package_name": "com.cuisinemada.cuisine_mada"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCo54UkwbH3NOXf2zsxbJeZIWB0-MnZS1M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
