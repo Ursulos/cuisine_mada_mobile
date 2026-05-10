@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
 import 'package:cuisine_mada/core/constants/app_dimensions.dart';
+import 'package:cuisine_mada/core/network/cloudinary_service.dart';
 
 class AddRecipePage extends StatefulWidget {
   const AddRecipePage({super.key});
@@ -152,7 +155,8 @@ class _AddRecipePageState extends State<AddRecipePage> {
                           color: AppColors.secondaryLight,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: AppColors.secondaryMid.withOpacity(0.3),
+                            color:
+                                AppColors.secondaryMid.withOpacity(0.3),
                           ),
                         ),
                         child: Column(
@@ -207,53 +211,136 @@ class _AddRecipePageState extends State<AddRecipePage> {
   Future<void> _submitRecipe() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isSubmitting = false);
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusL),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('✅', style: TextStyle(fontSize: 48)),
-              const SizedBox(height: 12),
-              Text(
-                'Recette soumise !',
-                style: GoogleFonts.nunito(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textDark,
-                ),
+
+    try {
+      String? imageUrl;
+
+      if (_imageBytes != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '📤 Upload de la photo en cours...',
+                style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Votre recette sera vérifiée par notre équipe et publiée avec le badge "Créé par vous".',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.nunito(
-                  fontSize: 13,
-                  color: AppColors.textMuted,
+              backgroundColor: AppColors.secondary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        imageUrl = await CloudinaryService.uploadImage(
+          _imageBytes!,
+          '${_nameController.text.trim()}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
+      }
+
+      // Sauvegarde recette dans Firestore
+      final recipeRef = await FirebaseFirestore.instance
+          .collection('recipes')
+          .add({
+        'name': _nameController.text.trim(),
+        'description': _descController.text.trim(),
+        'emoji': '🍛',
+        'preparationMinutes':
+            int.tryParse(_timeController.text) ?? 0,
+        'basePersons':
+            int.tryParse(_personsController.text) ?? 4,
+        'estimatedCost': _totalPrice.toInt(),
+        'isHalal': _isHalal,
+        'isVegetarian': _isVegetarian,
+        'isValidated': false,
+        'imageUrl': imageUrl ?? '',
+        'createdByUserName':
+            FirebaseAuth.instance.currentUser?.displayName ?? '',
+        'averageRating': '0',
+        'tags': [],
+        'steps': _stepsController.text.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Sauvegarde ingrédients dans sous-collection
+      for (final ing in _ingredients) {
+        final name =
+            (ing['name'] as TextEditingController).text.trim();
+        if (name.isEmpty) continue;
+        await recipeRef.collection('ingredients').add({
+          'name': name,
+          'quantity': int.tryParse(
+                  (ing['quantity'] as TextEditingController).text) ??
+              0,
+          'unit': ing['unit'],
+          'pricePerUnit': int.tryParse(
+                  (ing['pricePerUnit'] as TextEditingController)
+                      .text) ??
+              0,
+        });
+      }
+
+      setState(() => _isSubmitting = false);
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius:
+                  BorderRadius.circular(AppDimensions.radiusL),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('✅', style: TextStyle(fontSize: 48)),
+                const SizedBox(height: 12),
+                Text(
+                  'Recette soumise !',
+                  style: GoogleFonts.nunito(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Votre recette sera vérifiée par notre équipe et publiée avec le badge "Créé par vous".',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Super !',
+                  style:
+                      GoogleFonts.nunito(fontWeight: FontWeight.w800),
                 ),
               ),
             ],
           ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Super !',
-                style: GoogleFonts.nunito(fontWeight: FontWeight.w800),
-              ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isSubmitting = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '❌ Erreur : $e',
+              style:
+                  GoogleFonts.nunito(fontWeight: FontWeight.w700),
             ),
-          ],
-        ),
-      );
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
