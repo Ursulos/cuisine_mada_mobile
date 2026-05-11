@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
 import 'package:cuisine_mada/core/constants/app_dimensions.dart';
+import 'package:cuisine_mada/core/utils/seed_service.dart';
 import 'package:cuisine_mada/presentation/pages/auth/login_page.dart';
 
 class PreferencesPage extends StatefulWidget {
@@ -17,6 +18,7 @@ class _PreferencesPageState extends State<PreferencesPage> {
   int _persons = 4;
   bool _isHalal = false;
   bool _isVegetarian = false;
+  bool _isSeeding = false;
   final TextEditingController _excludeController = TextEditingController();
   final List<String> _excludedIngredients = ['Voanjobory', 'Sakamalaho'];
 
@@ -87,8 +89,95 @@ class _PreferencesPageState extends State<PreferencesPage> {
     }
   }
 
+  Future<void> _seedRecipes() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusL),
+        ),
+        title: Text(
+          '🌱 Initialiser les recettes',
+          style: GoogleFonts.nunito(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textDark,
+          ),
+        ),
+        content: Text(
+          'Cela va supprimer toutes les recettes existantes et ajouter les 50 recettes malgaches. Continuer ?',
+          style: GoogleFonts.nunito(
+            fontSize: 14,
+            color: AppColors.textMuted,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Annuler',
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+            ),
+            child: Text(
+              'Initialiser',
+              style: GoogleFonts.nunito(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isSeeding = true);
+      try {
+        await SeedService.seedAllRecipes();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '✅ 50 recettes malgaches ajoutées !',
+                style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+              ),
+              backgroundColor: AppColors.secondary,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ Erreur : $e',
+                style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+              ),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } finally {
+        setState(() => _isSeeding = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isAdmin = _user?.email == 'yaaz.hdb@gmail.com';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -111,6 +200,10 @@ class _PreferencesPageState extends State<PreferencesPage> {
               const SizedBox(height: 24),
               _buildGenerateButton(context),
               const SizedBox(height: 14),
+              if (isAdmin) ...[
+                _buildSeedButton(),
+                const SizedBox(height: 14),
+              ],
               _buildLogoutButton(),
               const SizedBox(height: 80),
             ],
@@ -275,12 +368,20 @@ class _PreferencesPageState extends State<PreferencesPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('3 000 Ar',
-                  style: GoogleFonts.nunito(
-                      fontSize: 11, color: AppColors.textLight)),
-              Text('50 000 Ar',
-                  style: GoogleFonts.nunito(
-                      fontSize: 11, color: AppColors.textLight)),
+              Text(
+                '3 000 Ar',
+                style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  color: AppColors.textLight,
+                ),
+              ),
+              Text(
+                '50 000 Ar',
+                style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  color: AppColors.textLight,
+                ),
+              ),
             ],
           ),
         ],
@@ -309,8 +410,10 @@ class _PreferencesPageState extends State<PreferencesPage> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: AppColors.primaryMid),
                   ),
-                  child: const Icon(Icons.remove_rounded,
-                      color: AppColors.primary),
+                  child: const Icon(
+                    Icons.remove_rounded,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
               Padding(
@@ -335,8 +438,10 @@ class _PreferencesPageState extends State<PreferencesPage> {
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.add_rounded,
-                      color: AppColors.white),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    color: AppColors.white,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -523,6 +628,35 @@ class _PreferencesPageState extends State<PreferencesPage> {
             fontWeight: FontWeight.w800,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSeedButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: AppDimensions.buttonHeight,
+      child: ElevatedButton(
+        onPressed: _isSeeding ? null : _seedRecipes,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.secondary,
+        ),
+        child: _isSeeding
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : Text(
+                '🌱 Initialiser les 50 recettes',
+                style: GoogleFonts.nunito(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
       ),
     );
   }
