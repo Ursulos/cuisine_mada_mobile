@@ -4,25 +4,27 @@ class SeedService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   static Future<void> seedAllRecipes() async {
-    // Supprimer les anciennes recettes
     final old = await _firestore.collection('recipes').get();
     for (final doc in old.docs) {
+      final ings = await doc.reference.collection('ingredients').get();
+      for (final ing in ings.docs) {
+        await ing.reference.delete();
+      }
       await doc.reference.delete();
     }
 
-    print('🗑️ Anciennes recettes supprimées');
-
     for (final recipe in _getRecipes()) {
-      final ingredients = recipe['ingredients'] as List<Map<String, dynamic>>;
+      final ingredients =
+          recipe['ingredients'] as List<Map<String, dynamic>>;
       final recipeData = Map<String, dynamic>.from(recipe)
         ..remove('ingredients');
 
-      final ref = await _firestore.collection('recipes').add(recipeData);
+      final ref =
+          await _firestore.collection('recipes').add(recipeData);
 
       for (final ing in ingredients) {
         await ref.collection('ingredients').add(ing);
       }
-      print('✅ ${recipe['name']} ajouté');
     }
   }
 
@@ -46,6 +48,7 @@ class SeedService {
     required bool isHalal,
     required bool isVegetarian,
     required List<String> tags,
+    required String steps,
     required List<Map<String, dynamic>> ingredients,
   }) {
     final totalCost = ingredients.fold<double>(
@@ -65,6 +68,7 @@ class SeedService {
       'createdByUserName': '',
       'averageRating': '4.5',
       'tags': tags,
+      'steps': steps,
       'createdAt': FieldValue.serverTimestamp(),
       'ingredients': ingredients,
     };
@@ -82,6 +86,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel', 'Familial'],
+        steps: '1. Revenir le zébu avec oignon et gingembre dans l\'huile chaude.\n2. Ajouter les tomates coupées et laisser mijoter 10 minutes.\n3. Couvrir d\'eau et mijoter à feu doux 60 minutes jusqu\'à tendreté.\n4. Ajouter les brèdes mafana crues 20 minutes avant la fin pour garder le croquant.\n5. Saler et servir chaud avec du riz.',
         ingredients: [
           _ing('Zébu', 800, 'g', 20),
           _ing('Brèdes mafana', 500, 'g', 2),
@@ -102,6 +107,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: true,
         tags: ['Rapide', 'Économique', 'Végétarien', 'Halal'],
+        steps: '1. Rincer le riz et le mettre dans une casserole avec 1.5L d\'eau.\n2. Ajouter le gingembre râpé et le sel.\n3. Cuire à feu moyen 25 minutes jusqu\'à absorption de l\'eau.\n4. Hacher finement les brèdes cresson.\n5. Ajouter les brèdes au riz 5 minutes avant la fin et mélanger.',
         ingredients: [
           _ing('Riz', 200, 'g', 3.8),
           _ing('Brèdes cresson', 300, 'g', 2),
@@ -119,6 +125,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Familial', 'Savoureux'],
+        steps: '1. Couper le poulet en morceaux et assaisonner avec sel et poivre.\n2. Faire revenir l\'oignon et l\'ail dans une poêle chaude.\n3. Ajouter le poulet et dorer sur toutes les faces 10 minutes.\n4. Verser le lait de coco et laisser mijoter 20 minutes à feu moyen.\n5. Servir chaud avec du riz blanc.',
         ingredients: [
           _ing('Poulet', 1000, 'g', 15),
           _ing('Lait de coco', 300, 'ml', 3),
@@ -137,6 +144,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel', 'Familial'],
+        steps: '1. Piler finement les feuilles de manioc au mortier ou mixer.\n2. Faire revenir le porc coupé en morceaux avec oignon et ail.\n3. Ajouter les feuilles pilées et mélanger.\n4. Couvrir d\'eau et mijoter à feu très doux 2 heures.\n5. Remuer régulièrement. Servir avec du riz.',
         ingredients: [
           _ing('Porc', 800, 'g', 18),
           _ing('Feuilles de manioc (ravitoto)', 500, 'g', 5),
@@ -155,6 +163,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel'],
+        steps: '1. Blanchir les tripes 15 minutes dans de l\'eau bouillante salée.\n2. Égoutter et couper en morceaux.\n3. Faire revenir avec gingembre et tomate.\n4. Couvrir d\'eau et mijoter 70 minutes à feu doux.\n5. Ajouter les brèdes cresson crues 20 minutes avant la fin.',
         ingredients: [
           _ing('Tripes', 1000, 'g', 15),
           _ing('Brèdes cresson', 400, 'g', 2),
@@ -173,6 +182,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Familial', 'Savoureux'],
+        steps: '1. Couper le zébu en cubes et faire revenir avec oignon et ail.\n2. Ajouter les carottes et pommes de terre coupées.\n3. Couvrir d\'eau et mijoter 50 minutes.\n4. Assaisonner de sel et poivre.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Zébu', 700, 'g', 20),
           _ing('Carottes', 300, 'g', 2),
@@ -191,6 +201,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide', 'Économique'],
+        steps: '1. Nettoyer et mariner le tilapia avec citron et ail 10 minutes.\n2. Chauffer l\'huile dans une poêle à feu vif.\n3. Frire le tilapia 7-8 minutes de chaque côté jusqu\'à dorure.\n4. Hacher finement les brèdes mafana fraîches.\n5. Servir le tilapia avec les brèdes crues en accompagnement.',
         ingredients: [
           _ing('Tilapia', 800, 'g', 12),
           _ing('Brèdes mafana', 200, 'g', 2),
@@ -209,6 +220,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Familial'],
+        steps: '1. Tremper les haricots blancs la veille si possible.\n2. Cuire les haricots 30 minutes dans l\'eau.\n3. Faire revenir le poulet avec oignon et tomates.\n4. Ajouter les haricots cuits et mijoter 15 minutes ensemble.\n5. Saler et servir chaud.',
         ingredients: [
           _ing('Poulet', 800, 'g', 15),
           _ing('Haricots blancs', 300, 'g', 3),
@@ -226,6 +238,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel', 'Familial'],
+        steps: '1. Faire revenir le zébu avec oignon et gingembre.\n2. Couvrir d\'eau et mijoter 60 minutes à feu doux.\n3. Ajouter les brèdes anamalao crues 20 minutes avant la fin.\n4. Ne pas trop cuire les brèdes pour garder le croquant.\n5. Servir avec du riz blanc.',
         ingredients: [
           _ing('Zébu', 800, 'g', 20),
           _ing('Brèdes anamalao', 500, 'g', 2),
@@ -243,6 +256,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Économique'],
+        steps: '1. Blanchir les tripes et couper en morceaux.\n2. Cuire le riz avec les tripes et le gingembre 30 minutes.\n3. Hacher les brèdes finement.\n4. Ajouter les brèdes 10 minutes avant la fin.\n5. Saler et servir chaud.',
         ingredients: [
           _ing('Riz', 200, 'g', 3.8),
           _ing('Tripes', 500, 'g', 15),
@@ -260,6 +274,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel'],
+        steps: '1. Couper le zébu en morceaux et assaisonner.\n2. Faire revenir les oignons émincés jusqu\'à dorure.\n3. Ajouter le zébu et le gingembre râpé.\n4. Mijoter lentement 80 minutes à feu doux.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Zébu', 1000, 'g', 20),
           _ing('Oignon', 2, 'pièce(s)', 500),
@@ -277,6 +292,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide', 'Savoureux'],
+        steps: '1. Décortiquer et nettoyer les crevettes.\n2. Faire revenir l\'ail et le gingembre dans une poêle.\n3. Ajouter les crevettes et sauter 5 minutes à feu vif.\n4. Verser le lait de coco et mijoter 15 minutes.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Crevettes', 500, 'g', 25),
           _ing('Lait de coco', 200, 'ml', 3),
@@ -294,6 +310,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Familial', 'Économique'],
+        steps: '1. Cuire les haricots rouges 40 minutes dans l\'eau.\n2. Faire revenir le zébu avec oignon et tomates.\n3. Ajouter les haricots cuits et mélanger.\n4. Mijoter ensemble 20 minutes.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Zébu', 500, 'g', 20),
           _ing('Haricots rouges', 400, 'g', 3),
@@ -311,6 +328,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: true,
         tags: ['Rapide', 'Économique', 'Végétarien', 'Halal'],
+        steps: '1. Faire revenir l\'oignon et les tomates coupées.\n2. Ajouter les brèdes hachées crues et mélanger.\n3. Battre les oeufs et verser sur les légumes.\n4. Brouiller doucement à feu moyen 5 minutes.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Oeufs', 4, 'pièce(s)', 500),
           _ing('Brèdes', 200, 'g', 2),
@@ -328,6 +346,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel', 'Familial'],
+        steps: '1. Piler finement les feuilles de manioc.\n2. Faire revenir le zébu avec l\'ail écrasé.\n3. Ajouter les feuilles pilées au zébu.\n4. Couvrir d\'eau et mijoter 100 minutes à feu très doux.\n5. Remuer régulièrement et servir avec du riz.',
         ingredients: [
           _ing('Zébu', 800, 'g', 20),
           _ing('Feuilles de manioc (ravitoto)', 500, 'g', 5),
@@ -344,6 +363,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Familial'],
+        steps: '1. Couper le porc en morceaux et assaisonner.\n2. Faire revenir avec oignon et gingembre râpé.\n3. Ajouter les carottes coupées en rondelles.\n4. Couvrir d\'eau et mijoter 45 minutes.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Porc', 700, 'g', 18),
           _ing('Carottes', 300, 'g', 2),
@@ -361,6 +381,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Économique'],
+        steps: '1. Cuire les haricots 20 minutes dans l\'eau salée.\n2. Assaisonner le capitaine et frire 15 minutes dans l\'huile chaude.\n3. Préparer une sauce tomate avec oignon et tomate.\n4. Mélanger haricots et sauce tomate.\n5. Servir le poisson avec les haricots en accompagnement.',
         ingredients: [
           _ing('Capitaine', 600, 'g', 13),
           _ing('Haricots', 300, 'g', 3),
@@ -377,6 +398,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Familial'],
+        steps: '1. Cuire les lentilles 50 minutes dans l\'eau.\n2. Faire dorer les oignons émincés jusqu\'à caramélisation.\n3. Ajouter le poulet et cuire 20 minutes.\n4. Mélanger avec les lentilles cuites.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Poulet', 800, 'g', 15),
           _ing('Lentilles', 300, 'g', 3.5),
@@ -393,6 +415,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel'],
+        steps: '1. Blanchir les tripes dans l\'eau bouillante 15 minutes.\n2. Égoutter et couper en morceaux réguliers.\n3. Faire revenir avec oignon et gingembre râpé.\n4. Couvrir d\'eau et mijoter 80 minutes à feu doux.\n5. Saler en fin de cuisson et servir chaud.',
         ingredients: [
           _ing('Tripes', 800, 'g', 15),
           _ing('Gingembre', 20, 'g', 5),
@@ -410,6 +433,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide', 'Savoureux'],
+        steps: '1. Nettoyer et couper les calamars en anneaux.\n2. Émincer l\'ail et couper les poivrons en lanières.\n3. Faire sauter l\'ail dans l\'huile chaude.\n4. Ajouter les calamars et les poivrons et sauter 15 minutes à feu vif.\n5. Saler et servir immédiatement.',
         ingredients: [
           _ing('Calamars', 400, 'g', 25),
           _ing('Poivrons', 200, 'g', 3),
@@ -426,6 +450,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel', 'Familial'],
+        steps: '1. Faire revenir le porc avec gingembre et tomate.\n2. Couvrir d\'eau et mijoter 60 minutes à feu doux.\n3. Ajouter les brèdes mafana crues 20 minutes avant la fin.\n4. Ne pas trop cuire pour garder le croquant des brèdes.\n5. Servir chaud avec du riz blanc.',
         ingredients: [
           _ing('Porc', 700, 'g', 18),
           _ing('Brèdes mafana', 400, 'g', 2),
@@ -443,6 +468,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Savoureux', 'Familial'],
+        steps: '1. Faire revenir le porc coupé en morceaux.\n2. Ajouter les haricots et couvrir d\'eau.\n3. Mijoter 35 minutes jusqu\'à tendreté.\n4. Verser le lait de coco en fin de cuisson.\n5. Mélanger et servir chaud avec du riz.',
         ingredients: [
           _ing('Porc', 600, 'g', 18),
           _ing('Haricots', 300, 'g', 3),
@@ -459,6 +485,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide', 'Économique'],
+        steps: '1. Nettoyer le tilapia et mariner avec citron 10 minutes.\n2. Chauffer l\'huile dans une poêle.\n3. Frire le tilapia 8 minutes de chaque côté.\n4. Laver et préparer les brèdes cresson fraîches.\n5. Servir le poisson avec les brèdes crues à côté.',
         ingredients: [
           _ing('Tilapia', 600, 'g', 12),
           _ing('Brèdes cresson', 300, 'g', 2),
@@ -476,6 +503,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Traditionnel'],
+        steps: '1. Piler finement les feuilles de manioc.\n2. Faire revenir le poulet avec l\'ail écrasé.\n3. Ajouter les feuilles pilées et mélanger bien.\n4. Couvrir d\'eau et mijoter 90 minutes à feu très doux.\n5. Remuer souvent et servir avec du riz.',
         ingredients: [
           _ing('Poulet', 700, 'g', 15),
           _ing('Feuilles de manioc (ravitoto)', 400, 'g', 5),
@@ -492,6 +520,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Familial'],
+        steps: '1. Faire revenir le zébu coupé en morceaux.\n2. Ajouter les carottes en rondelles et couvrir d\'eau.\n3. Mijoter 35 minutes à feu moyen.\n4. Pocher les oeufs dans le bouillon 5 minutes.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Zébu', 600, 'g', 20),
           _ing('Oeufs', 4, 'pièce(s)', 500),
@@ -508,6 +537,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Économique'],
+        steps: '1. Blanchir les tripes et couper en morceaux.\n2. Cuire les haricots blancs 30 minutes séparément.\n3. Faire revenir les tripes avec gingembre.\n4. Ajouter les haricots et mijoter ensemble 50 minutes.\n5. Saler et servir chaud.',
         ingredients: [
           _ing('Tripes', 700, 'g', 15),
           _ing('Haricots blancs', 300, 'g', 3),
@@ -524,6 +554,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide', 'Savoureux'],
+        steps: '1. Décortiquer les crevettes et mariner avec citron et ail 10 minutes.\n2. Chauffer une poêle à feu vif.\n3. Sauter les crevettes marinées 5 minutes de chaque côté.\n4. Arroser du reste de marinade citron.\n5. Servir immédiatement avec du riz.',
         ingredients: [
           _ing('Crevettes', 400, 'g', 25),
           _ing('Citron', 2, 'pièce(s)', 300),
@@ -540,6 +571,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Rapide', 'Économique'],
+        steps: '1. Faire revenir le porc coupé finement avec les tomates.\n2. Mijoter 20 minutes à feu moyen.\n3. Battre les oeufs et verser sur le porc.\n4. Brouiller doucement jusqu\'à cuisson des oeufs.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Porc', 500, 'g', 18),
           _ing('Oeufs', 2, 'pièce(s)', 500),
@@ -556,6 +588,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Savoureux'],
+        steps: '1. Couper le capitaine en darnes et assaisonner.\n2. Faire revenir le gingembre râpé dans une poêle.\n3. Ajouter le poisson et dorer 5 minutes de chaque côté.\n4. Verser le lait de coco et mijoter 20 minutes.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Capitaine', 600, 'g', 13),
           _ing('Lait de coco', 250, 'ml', 3),
@@ -572,6 +605,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Familial'],
+        steps: '1. Cuire les pois chiches 30 minutes dans l\'eau.\n2. Faire dorer le poulet avec les oignons émincés.\n3. Ajouter les pois chiches cuits et mélanger.\n4. Mijoter ensemble 20 minutes.\n5. Saler et servir chaud avec du riz.',
         ingredients: [
           _ing('Poulet', 700, 'g', 15),
           _ing('Pois chiches', 300, 'g', 4),
@@ -588,6 +622,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel', 'Familial'],
+        steps: '1. Faire revenir le zébu avec oignon et gingembre.\n2. Couvrir d\'eau et mijoter 60 minutes.\n3. Ajouter les brèdes vertes crues 20 minutes avant la fin.\n4. Ne pas trop cuire les brèdes.\n5. Servir avec du riz blanc.',
         ingredients: [
           _ing('Zébu', 700, 'g', 20),
           _ing('Brèdes vertes', 500, 'g', 2),
@@ -605,6 +640,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide'],
+        steps: '1. Nettoyer soigneusement les moules.\n2. Faire revenir l\'ail émincé dans l\'huile.\n3. Ajouter les poivrons en lanières et sauter 5 minutes.\n4. Ajouter les moules et couvrir 10 minutes.\n5. Servir dès que toutes les moules sont ouvertes.',
         ingredients: [
           _ing('Moules', 500, 'g', 25),
           _ing('Poivrons', 300, 'g', 3),
@@ -621,6 +657,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Familial', 'Économique'],
+        steps: '1. Cuire les lentilles 30 minutes dans l\'eau.\n2. Faire revenir le zébu avec les tomates coupées.\n3. Ajouter les lentilles cuites et mélanger.\n4. Mijoter ensemble 30 minutes.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Zébu', 600, 'g', 20),
           _ing('Lentilles', 300, 'g', 3.5),
@@ -637,6 +674,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: true,
         tags: ['Rapide', 'Économique', 'Végétarien', 'Halal'],
+        steps: '1. Couper les aubergines en petits cubes.\n2. Faire revenir l\'oignon et les aubergines 15 minutes.\n3. Battre les oeufs et assaisonner.\n4. Verser les oeufs sur les légumes et cuire à feu moyen.\n5. Plier en omelette et servir chaud.',
         ingredients: [
           _ing('Oeufs', 4, 'pièce(s)', 500),
           _ing('Aubergines', 300, 'g', 1.5),
@@ -653,6 +691,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel'],
+        steps: '1. Blanchir les tripes et couper en morceaux.\n2. Piler finement les feuilles de manioc.\n3. Faire revenir les tripes avec oignon.\n4. Ajouter les feuilles pilées et couvrir d\'eau.\n5. Mijoter 100 minutes à feu très doux et servir avec du riz.',
         ingredients: [
           _ing('Tripes', 800, 'g', 15),
           _ing('Feuilles de manioc (ravitoto)', 500, 'g', 5),
@@ -669,6 +708,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Familial'],
+        steps: '1. Faire dorer le poulet en morceaux.\n2. Ajouter les courgettes et haricots coupés.\n3. Couvrir d\'eau et assaisonner.\n4. Mijoter 45 minutes à feu moyen.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Poulet', 600, 'g', 15),
           _ing('Courgettes', 300, 'g', 2),
@@ -685,6 +725,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Savoureux'],
+        steps: '1. Faire revenir le porc avec le gingembre râpé.\n2. Laisser dorer 10 minutes à feu vif.\n3. Verser le lait de coco et baisser le feu.\n4. Mijoter 30 minutes à couvert.\n5. Servir chaud avec du riz.',
         ingredients: [
           _ing('Porc', 600, 'g', 18),
           _ing('Lait de coco', 200, 'ml', 3),
@@ -701,6 +742,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide', 'Économique'],
+        steps: '1. Assaisonner le tilapia avec sel et citron.\n2. Frire dans l\'huile chaude 8 minutes de chaque côté.\n3. Battre les oeufs avec sel et poivre.\n4. Cuire les oeufs brouillés ou au plat à côté.\n5. Servir le tout avec du riz blanc.',
         ingredients: [
           _ing('Tilapia', 500, 'g', 12),
           _ing('Oeufs', 3, 'pièce(s)', 500),
@@ -716,6 +758,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide'],
+        steps: '1. Nettoyer et couper les calamars en anneaux.\n2. Couper les carottes en julienne.\n3. Sauter calamars et carottes à feu vif 10 minutes.\n4. Arroser de jus de citron et assaisonner.\n5. Servir immédiatement avec du riz.',
         ingredients: [
           _ing('Calamars', 400, 'g', 25),
           _ing('Carottes', 200, 'g', 2),
@@ -732,6 +775,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel', 'Rapide'],
+        steps: '1. Faire revenir le zébu avec tomate à feu vif 10 minutes.\n2. Couvrir d\'eau et mijoter 25 minutes.\n3. Ajouter les brèdes mafana crues.\n4. Mijoter encore 10 minutes en gardant le croquant.\n5. Servir avec du riz blanc.',
         ingredients: [
           _ing('Zébu', 500, 'g', 20),
           _ing('Brèdes mafana', 400, 'g', 2),
@@ -748,6 +792,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Économique'],
+        steps: '1. Blanchir les tripes et couper en morceaux.\n2. Éplucher et couper les carottes en rondelles.\n3. Faire revenir les tripes avec sel.\n4. Ajouter les carottes et couvrir d\'eau.\n5. Mijoter 55 minutes à feu doux et servir.',
         ingredients: [
           _ing('Tripes', 600, 'g', 15),
           _ing('Carottes', 400, 'g', 2),
@@ -764,6 +809,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide'],
+        steps: '1. Décortiquer et nettoyer les crevettes.\n2. Écraser l\'ail et faire revenir dans l\'huile.\n3. Ajouter les crevettes et sauter 10 minutes à feu vif.\n4. Laver et préparer les brèdes fraîches séparément.\n5. Servir les crevettes avec les brèdes crues à côté.',
         ingredients: [
           _ing('Crevettes', 400, 'g', 25),
           _ing('Brèdes', 300, 'g', 2),
@@ -780,6 +826,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Traditionnel'],
+        steps: '1. Piler très finement les feuilles de manioc.\n2. Faire revenir le poulet coupé en morceaux.\n3. Ajouter les feuilles pilées et bien mélanger.\n4. Couvrir d\'eau et mijoter 90 minutes à très feu doux.\n5. Remuer régulièrement et servir avec du riz.',
         ingredients: [
           _ing('Poulet', 700, 'g', 15),
           _ing('Feuilles de manioc (ravitoto)', 400, 'g', 5),
@@ -795,6 +842,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Familial', 'Économique'],
+        steps: '1. Couper le porc en morceaux et assaisonner.\n2. Faire revenir dans une casserole avec un peu d\'huile.\n3. Ajouter les haricots verts équeutés.\n4. Couvrir d\'eau et mijoter 45 minutes.\n5. Saler et servir chaud avec du riz.',
         ingredients: [
           _ing('Porc', 500, 'g', 18),
           _ing('Haricots verts', 300, 'g', 2.5),
@@ -810,6 +858,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide'],
+        steps: '1. Assaisonner et fariner légèrement le capitaine.\n2. Frire dans l\'huile chaude 10 minutes de chaque côté.\n3. Préparer une sauce avec tomates fraîches mixées.\n4. Faire chauffer la sauce tomate 10 minutes.\n5. Servir le poisson nappé de sauce tomate avec du riz.',
         ingredients: [
           _ing('Capitaine', 500, 'g', 13),
           _ing('Tomates', 200, 'g', 0.8),
@@ -825,6 +874,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: true,
         tags: ['Rapide', 'Économique', 'Végétarien', 'Halal'],
+        steps: '1. Couper les poivrons en petits dés.\n2. Faire revenir les poivrons 5 minutes dans l\'huile.\n3. Battre les oeufs avec sel et poivre.\n4. Verser les oeufs sur les poivrons.\n5. Cuire à feu moyen et plier en omelette.',
         ingredients: [
           _ing('Oeufs', 4, 'pièce(s)', 500),
           _ing('Poivrons', 300, 'g', 3),
@@ -840,6 +890,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Économique'],
+        steps: '1. Blanchir les tripes et couper en morceaux.\n2. Cuire les haricots 30 minutes séparément.\n3. Mélanger tripes et haricots dans une casserole.\n4. Couvrir d\'eau et mijoter ensemble 40 minutes.\n5. Saler et servir chaud avec du riz.',
         ingredients: [
           _ing('Haricots', 400, 'g', 3),
           _ing('Tripes', 500, 'g', 15),
@@ -855,6 +906,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Rapide'],
+        steps: '1. Nettoyer soigneusement les moules sous l\'eau froide.\n2. Faire revenir l\'ail émincé dans l\'huile.\n3. Ajouter les moules et couvrir à feu vif.\n4. Cuire 10 minutes jusqu\'à ouverture des coquilles.\n5. Arroser de jus de citron et servir immédiatement.',
         ingredients: [
           _ing('Moules', 400, 'g', 25),
           _ing('Citron', 1, 'pièce(s)', 300),
@@ -871,6 +923,7 @@ class SeedService {
         isHalal: false,
         isVegetarian: false,
         tags: ['Traditionnel', 'Savoureux'],
+        steps: '1. Piler les feuilles de manioc finement.\n2. Faire revenir le zébu coupé en morceaux.\n3. Ajouter les feuilles pilées et mélanger.\n4. Verser le lait de coco et couvrir d\'eau.\n5. Mijoter 80 minutes à feu très doux et servir.',
         ingredients: [
           _ing('Zébu', 600, 'g', 20),
           _ing('Feuilles de manioc (ravitoto)', 300, 'g', 5),
@@ -887,6 +940,7 @@ class SeedService {
         isHalal: true,
         isVegetarian: false,
         tags: ['Halal', 'Traditionnel', 'Familial'],
+        steps: '1. Faire revenir le poulet avec le gingembre râpé.\n2. Couvrir d\'eau et mijoter 30 minutes à feu moyen.\n3. Ajouter les brèdes cresson crues 20 minutes avant la fin.\n4. Ne pas trop cuire pour garder le croquant des brèdes.\n5. Servir chaud avec du riz blanc.',
         ingredients: [
           _ing('Poulet', 600, 'g', 15),
           _ing('Brèdes cresson', 300, 'g', 2),

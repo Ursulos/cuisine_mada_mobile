@@ -36,12 +36,19 @@ class RecipeRemoteDatasource {
         .toList();
 
     if (tag != null && tag != 'Tout') {
-      recipes = recipes
-          .where((r) => r.tags.contains(tag))
-          .toList();
+      recipes = recipes.where((r) => r.tags.contains(tag)).toList();
     }
 
     return recipes;
+  }
+
+  Future<List<Map<String, dynamic>>> getIngredients(String recipeId) async {
+    final snapshot = await _firestore
+        .collection('recipes')
+        .doc(recipeId)
+        .collection('ingredients')
+        .get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
   Future<void> submitRecipe(RecipeModel recipe) async {

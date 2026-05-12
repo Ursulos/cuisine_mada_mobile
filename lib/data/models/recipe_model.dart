@@ -7,7 +7,9 @@ class RecipeModel extends Recipe {
     required super.name,
     required super.description,
     required super.emoji,
+    required super.imageUrl,
     required super.preparationMinutes,
+    required super.cookMinutes,
     required super.basePersons,
     required super.estimatedCost,
     required super.isHalal,
@@ -16,6 +18,7 @@ class RecipeModel extends Recipe {
     required super.tags,
     super.createdByUserName,
     required super.averageRating,
+    required super.steps,
   });
 
   factory RecipeModel.fromFirestore(DocumentSnapshot doc) {
@@ -25,7 +28,9 @@ class RecipeModel extends Recipe {
       name: data['name'] ?? '',
       description: data['description'] ?? '',
       emoji: data['emoji'] ?? '🍛',
+      imageUrl: data['imageUrl'] ?? '',
       preparationMinutes: data['preparationMinutes'] ?? 0,
+      cookMinutes: data['cookMinutes'] ?? 0,
       basePersons: data['basePersons'] ?? 4,
       estimatedCost: data['estimatedCost'] ?? 0,
       isHalal: data['isHalal'] ?? false,
@@ -38,6 +43,7 @@ class RecipeModel extends Recipe {
       averageRating: double.tryParse(
               data['averageRating']?.toString() ?? '0') ??
           0.0,
+      steps: data['steps'] ?? '',
     );
   }
 
@@ -46,7 +52,9 @@ class RecipeModel extends Recipe {
       'name': name,
       'description': description,
       'emoji': emoji,
+      'imageUrl': imageUrl,
       'preparationMinutes': preparationMinutes,
+      'cookMinutes': cookMinutes,
       'basePersons': basePersons,
       'estimatedCost': estimatedCost,
       'isHalal': isHalal,
@@ -55,6 +63,7 @@ class RecipeModel extends Recipe {
       'tags': tags,
       'createdByUserName': createdByUserName ?? '',
       'averageRating': averageRating.toString(),
+      'steps': steps,
     };
   }
 }

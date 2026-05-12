@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
 import 'package:cuisine_mada/core/constants/app_dimensions.dart';
+import 'package:cuisine_mada/data/datasources/remote/recipe_remote_datasource.dart';
 import 'package:cuisine_mada/data/models/recipe_model.dart';
 
 class RecipeDetailPage extends StatefulWidget {
@@ -16,47 +17,85 @@ class RecipeDetailPage extends StatefulWidget {
 class _RecipeDetailPageState extends State<RecipeDetailPage> {
   bool _isFavorite = false;
   int _persons = 4;
+  List<Map<String, dynamic>> _ingredients = [];
+  bool _loadingIngredients = true;
 
-  final int _basePricePerPerson = 3000;
-  final int _basePersons = 4;
-
-  final List<Map<String, dynamic>> _ingredients = [
-    {'name': 'Riz (vary)', 'qty': 400, 'unit': 'g', 'pricePerKg': 5000},
-    {'name': 'Viande de porc', 'qty': 300, 'unit': 'g', 'pricePerKg': 20000},
-    {'name': 'Brèdes mafanes', 'qty': 200, 'unit': 'g', 'pricePerKg': 7500},
-    {'name': 'Oignon', 'qty': 2, 'unit': 'pièce(s)', 'pricePerKg': 250},
-    {'name': 'Tomate', 'qty': 2, 'unit': 'pièce(s)', 'pricePerKg': 400},
-    {'name': 'Huile, sel, poivre', 'qty': 1, 'unit': 'pièce(s)', 'pricePerKg': 1200},
-  ];
-
-  double get _totalPrice {
-    return _basePricePerPerson * _persons.toDouble();
-  }
-
-  double _ingredientPrice(Map<String, dynamic> ing) {
-    final baseQty = ing['qty'] as int;
-    final pricePerUnit = ing['pricePerKg'] as int;
-    final unit = ing['unit'] as String;
-    double basePrice = 0;
-    if (unit == 'g') {
-      basePrice = (baseQty / 1000) * pricePerUnit;
-    } else {
-      basePrice = baseQty * pricePerUnit.toDouble();
-    }
-    return (basePrice / _basePersons) * _persons;
-  }
-
-  double _adjustedQty(Map<String, dynamic> ing) {
-    final baseQty = ing['qty'] as int;
-    return (baseQty / _basePersons) * _persons;
-  }
+  final RecipeRemoteDatasource _datasource = RecipeRemoteDatasource();
 
   @override
   void initState() {
     super.initState();
     if (widget.recipe != null) {
       _persons = widget.recipe!.basePersons;
+      _loadIngredients();
     }
+  }
+
+  Future<void> _loadIngredients() async {
+    if (widget.recipe == null) return;
+    setState(() => _loadingIngredients = true);
+    try {
+      final ingredients =
+          await _datasource.getIngredients(widget.recipe!.id);
+      setState(() {
+        _ingredients = ingredients;
+        _loadingIngredients = false;
+      });
+    } catch (e) {
+      setState(() => _loadingIngredients = false);
+    }
+  }
+
+  double get _totalPrice {
+    if (_ingredients.isEmpty) {
+      return ((widget.recipe?.estimatedCost ?? 0) / 
+          (widget.recipe?.basePersons ?? 4)) * _persons;
+    }
+    double total = 0;
+    for (final ing in _ingredients) {
+      final qty = (ing['quantity'] as num).toDouble();
+      final price = (ing['pricePerUnit'] as num).toDouble();
+      final unit = ing['unit'] as String;
+      double basePrice = 0;
+      if (unit == 'kg' || unit == 'litre') {
+        basePrice = (qty / 1000) * price;
+      } else {
+        basePrice = qty * price;
+      }
+      total += basePrice;
+    }
+    final basePersons = widget.recipe?.basePersons ?? 4;
+    return (total / basePersons) * _persons;
+  }
+
+  double _ingredientPrice(Map<String, dynamic> ing) {
+    final qty = (ing['quantity'] as num).toDouble();
+    final price = (ing['pricePerUnit'] as num).toDouble();
+    final unit = ing['unit'] as String;
+    double basePrice = 0;
+    if (unit == 'kg' || unit == 'litre') {
+      basePrice = (qty / 1000) * price;
+    } else {
+      basePrice = qty * price;
+    }
+    final basePersons = widget.recipe?.basePersons ?? 4;
+    return (basePrice / basePersons) * _persons;
+  }
+
+  double _adjustedQty(Map<String, dynamic> ing) {
+    final qty = (ing['quantity'] as num).toDouble();
+    final basePersons = widget.recipe?.basePersons ?? 4;
+    return (qty / basePersons) * _persons;
+  }
+
+  List<String> _parseSteps() {
+    final steps = widget.recipe?.steps ?? '';
+    if (steps.isEmpty) return [];
+    return steps
+        .split(RegExp(r'\n|(?=\d+\.)'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
   }
 
   @override
@@ -130,24 +169,31 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         background: Stack(
           fit: StackFit.expand,
           children: [
+            // Image ou gradient
+            recipe?.imageUrl != null && recipe!.imageUrl.isNotEmpty
+                ? Image.network(
+                    recipe.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _buildGradientBg(),
+                  )
+                : _buildGradientBg(),
+            // Overlay sombre
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFFC8712A), Color(0xFF5C3010)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.6),
+                  ],
                 ),
-              ),
-            ),
-            Center(
-              child: Text(
-                recipe?.emoji ?? '🍛',
-                style: const TextStyle(fontSize: 100),
               ),
             ),
             Positioned(
               bottom: 16,
               left: 16,
+              right: 16,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -166,7 +212,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                       color: AppColors.white.withOpacity(0.8),
                     ),
                   ),
-                  if (recipe?.createdByUserName != null) ...[
+                  if (recipe?.createdByUserName != null &&
+                      recipe!.createdByUserName!.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -178,7 +225,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '✍️ Créé par ${recipe!.createdByUserName}',
+                        '✍️ Créé par ${recipe.createdByUserName}',
                         style: GoogleFonts.nunito(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -191,6 +238,24 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGradientBg() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFC8712A), Color(0xFF5C3010)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          widget.recipe?.emoji ?? '🍛',
+          style: const TextStyle(fontSize: 100),
         ),
       ),
     );
@@ -291,7 +356,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
               const SizedBox(width: 8),
               _metaChip(
                 Icons.timer_rounded,
-                '${recipe?.preparationMinutes ?? 30} min',
+                '${recipe?.preparationMinutes ?? 0} min',
                 const Color(0xFFE3F2FD),
                 const Color(0xFF1565C0),
               ),
@@ -307,17 +372,18 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             ],
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            children: [
-              if (recipe != null)
-                ...recipe.tags.map((tag) => _tag(
-                      tag,
-                      AppColors.tagEasyBg,
-                      AppColors.tagEasyText,
-                    )),
-            ],
-          ),
+          if (recipe != null)
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: recipe.tags
+                  .map((tag) => _tag(
+                        tag,
+                        AppColors.tagEasyBg,
+                        AppColors.tagEasyText,
+                      ))
+                  .toList(),
+            ),
           const SizedBox(height: 12),
         ],
       ),
@@ -332,6 +398,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
@@ -399,7 +466,20 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             ),
           ),
           const SizedBox(height: 12),
-          ..._ingredients.map((ing) => _ingredientRow(ing)),
+          if (_loadingIngredients)
+            const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
+          else if (_ingredients.isEmpty)
+            Text(
+              'Aucun ingrédient disponible',
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                color: AppColors.textMuted,
+              ),
+            )
+          else
+            ..._ingredients.map((ing) => _ingredientRow(ing)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
@@ -450,7 +530,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         children: [
           Expanded(
             child: Text(
-              ing['name'],
+              ing['name'] ?? '',
               style: GoogleFonts.nunito(
                 fontSize: 13,
                 color: AppColors.textDark,
@@ -481,12 +561,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   }
 
   Widget _buildSteps() {
-    final steps = [
-      'Faire revenir l\'oignon et la tomate dans l\'huile chaude jusqu\'à dorure.',
-      'Ajouter la viande coupée en morceaux et faire sauter 10 minutes à feu vif.',
-      'Incorporer les brèdes, couvrir et cuire à feu moyen pendant 10 minutes.',
-      'Cuire le riz séparément à l\'eau salée. Servir chaud avec le ragoût.',
-    ];
+    final steps = _parseSteps();
 
     return Padding(
       padding: const EdgeInsets.all(AppDimensions.paddingL),
@@ -502,9 +577,26 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             ),
           ),
           const SizedBox(height: 12),
-          ...steps.asMap().entries.map(
-                (e) => _stepItem(e.key + 1, e.value),
+          if (steps.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceGray,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusM),
               ),
+              child: Text(
+                widget.recipe?.description ?? 'Préparation non disponible.',
+                style: GoogleFonts.nunito(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
+                  height: 1.6,
+                ),
+              ),
+            )
+          else
+            ...steps.asMap().entries.map(
+                  (e) => _stepItem(e.key + 1, e.value),
+                ),
         ],
       ),
     );
@@ -565,10 +657,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  '✅ Ajouté à votre historique !',
-                  style: GoogleFonts.nunito(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  '✅ ${widget.recipe?.name ?? 'Recette'} ajoutée à votre historique !',
+                  style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
                 ),
                 backgroundColor: AppColors.secondary,
                 behavior: SnackBarBehavior.floating,
