@@ -58,7 +58,8 @@ class _LoginPageState extends State<LoginPage> {
             _errorMessage = 'Email invalide.';
             break;
           case 'too-many-requests':
-            _errorMessage = 'Trop de tentatives. Réessayez plus tard.';
+            _errorMessage =
+                'Trop de tentatives. Réessayez plus tard.';
             break;
           default:
             _errorMessage = 'Erreur de connexion. Réessayez.';
@@ -69,10 +70,88 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _forgotPassword() async {
+    if (_emailController.text.trim().isEmpty) {
+      setState(() =>
+          _errorMessage = 'Entrez votre email pour réinitialiser.');
+      return;
+    }
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: _emailController.text.trim(),
+      );
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius:
+                  BorderRadius.circular(AppDimensions.radiusL),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('📧', style: TextStyle(fontSize: 48)),
+                const SizedBox(height: 12),
+                Text(
+                  'Email envoyé !',
+                  style: GoogleFonts.nunito(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Vérifiez votre boîte mail pour réinitialiser votre mot de passe.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'OK',
+                  style: GoogleFonts.nunito(
+                      fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() => _errorMessage =
+          'Erreur : ${e.message ?? 'Réessayez.'}');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Icon(Icons.arrow_back_rounded,
+                color: AppColors.textDark),
+          ),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppDimensions.paddingL),
@@ -81,11 +160,13 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
                 _buildHeader(),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
                 _buildForm(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
+                _buildForgotPassword(),
+                const SizedBox(height: 16),
                 if (_errorMessage != null) _buildError(),
                 const SizedBox(height: 16),
                 _buildLoginButton(),
@@ -181,8 +262,8 @@ class _LoginPageState extends State<LoginPage> {
               color: AppColors.textLight,
             ),
             suffixIcon: GestureDetector(
-              onTap: () =>
-                  setState(() => _obscurePassword = !_obscurePassword),
+              onTap: () => setState(
+                  () => _obscurePassword = !_obscurePassword),
               child: Icon(
                 _obscurePassword
                     ? Icons.visibility_rounded
@@ -193,6 +274,23 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildForgotPassword() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: GestureDetector(
+        onTap: _forgotPassword,
+        child: Text(
+          'Mot de passe oublié ?',
+          style: GoogleFonts.nunito(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
     );
   }
 

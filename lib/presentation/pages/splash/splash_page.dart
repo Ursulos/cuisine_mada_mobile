@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
-import 'package:cuisine_mada/presentation/pages/auth/login_page.dart';
+import 'package:cuisine_mada/presentation/pages/onboarding/onboarding_page.dart';
 import 'package:cuisine_mada/presentation/pages/main_page.dart';
 
 class SplashPage extends StatefulWidget {
@@ -44,7 +44,8 @@ class _SplashPageState extends State<SplashPage>
         } else {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const LoginPage()),
+            MaterialPageRoute(
+                builder: (_) => const OnboardingPage()),
           );
         }
       }
@@ -81,7 +82,8 @@ class _SplashPageState extends State<SplashPage>
                     ),
                   ),
                   child: const Center(
-                    child: Text('🍛', style: TextStyle(fontSize: 56)),
+                    child: Text('🍛',
+                        style: TextStyle(fontSize: 56)),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -111,7 +113,7 @@ class _SplashPageState extends State<SplashPage>
                   ),
                 ),
                 const SizedBox(height: 48),
-                SizedBox(
+                const SizedBox(
                   width: 32,
                   height: 32,
                   child: CircularProgressIndicator(
