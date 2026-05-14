@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuisine_mada/core/constants/app_colors.dart';
 import 'package:cuisine_mada/core/constants/app_dimensions.dart';
+import 'package:cuisine_mada/presentation/pages/auth/cgu_page.dart';
 import 'package:cuisine_mada/presentation/pages/main_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -21,6 +22,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  bool _acceptedCgu = false;
   String? _errorMessage;
 
   @override
@@ -34,6 +36,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_acceptedCgu) {
+      setState(() => _errorMessage =
+          'Vous devez accepter les CGU pour continuer.');
+      return;
+    }
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -113,7 +120,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 _buildHeader(),
                 const SizedBox(height: 32),
                 _buildForm(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
+                _buildCguCheckbox(context),
+                const SizedBox(height: 16),
                 if (_errorMessage != null) _buildError(),
                 const SizedBox(height: 16),
                 _buildRegisterButton(),
@@ -159,21 +168,15 @@ class _RegisterPageState extends State<RegisterPage> {
         TextFormField(
           controller: _nameController,
           style: GoogleFonts.nunito(
-            fontSize: 14,
-            color: AppColors.textDark,
-          ),
+              fontSize: 14, color: AppColors.textDark),
           validator: (v) =>
               v!.isEmpty ? 'Prénom obligatoire' : null,
           decoration: InputDecoration(
             hintText: 'Ex : Haja',
             hintStyle: GoogleFonts.nunito(
-              fontSize: 14,
-              color: AppColors.textLight,
-            ),
-            prefixIcon: const Icon(
-              Icons.person_rounded,
-              color: AppColors.textLight,
-            ),
+                fontSize: 14, color: AppColors.textLight),
+            prefixIcon: const Icon(Icons.person_rounded,
+                color: AppColors.textLight),
           ),
         ),
         const SizedBox(height: 16),
@@ -183,9 +186,7 @@ class _RegisterPageState extends State<RegisterPage> {
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
           style: GoogleFonts.nunito(
-            fontSize: 14,
-            color: AppColors.textDark,
-          ),
+              fontSize: 14, color: AppColors.textDark),
           validator: (v) {
             if (v!.isEmpty) return 'Email obligatoire';
             if (!v.contains('@')) return 'Email invalide';
@@ -194,13 +195,9 @@ class _RegisterPageState extends State<RegisterPage> {
           decoration: InputDecoration(
             hintText: 'votre@email.com',
             hintStyle: GoogleFonts.nunito(
-              fontSize: 14,
-              color: AppColors.textLight,
-            ),
-            prefixIcon: const Icon(
-              Icons.email_rounded,
-              color: AppColors.textLight,
-            ),
+                fontSize: 14, color: AppColors.textLight),
+            prefixIcon: const Icon(Icons.email_rounded,
+                color: AppColors.textLight),
           ),
         ),
         const SizedBox(height: 16),
@@ -210,9 +207,7 @@ class _RegisterPageState extends State<RegisterPage> {
           controller: _passwordController,
           obscureText: _obscurePassword,
           style: GoogleFonts.nunito(
-            fontSize: 14,
-            color: AppColors.textDark,
-          ),
+              fontSize: 14, color: AppColors.textDark),
           validator: (v) {
             if (v!.isEmpty) return 'Mot de passe obligatoire';
             if (v.length < 6) return 'Minimum 6 caractères';
@@ -221,13 +216,9 @@ class _RegisterPageState extends State<RegisterPage> {
           decoration: InputDecoration(
             hintText: '••••••••',
             hintStyle: GoogleFonts.nunito(
-              fontSize: 14,
-              color: AppColors.textLight,
-            ),
-            prefixIcon: const Icon(
-              Icons.lock_rounded,
-              color: AppColors.textLight,
-            ),
+                fontSize: 14, color: AppColors.textLight),
+            prefixIcon: const Icon(Icons.lock_rounded,
+                color: AppColors.textLight),
             suffixIcon: GestureDetector(
               onTap: () => setState(
                   () => _obscurePassword = !_obscurePassword),
@@ -247,9 +238,7 @@ class _RegisterPageState extends State<RegisterPage> {
           controller: _confirmPasswordController,
           obscureText: _obscureConfirm,
           style: GoogleFonts.nunito(
-            fontSize: 14,
-            color: AppColors.textDark,
-          ),
+              fontSize: 14, color: AppColors.textDark),
           validator: (v) {
             if (v!.isEmpty) return 'Confirmation obligatoire';
             if (v != _passwordController.text)
@@ -259,13 +248,9 @@ class _RegisterPageState extends State<RegisterPage> {
           decoration: InputDecoration(
             hintText: '••••••••',
             hintStyle: GoogleFonts.nunito(
-              fontSize: 14,
-              color: AppColors.textLight,
-            ),
-            prefixIcon: const Icon(
-              Icons.lock_rounded,
-              color: AppColors.textLight,
-            ),
+                fontSize: 14, color: AppColors.textLight),
+            prefixIcon: const Icon(Icons.lock_rounded,
+                color: AppColors.textLight),
             suffixIcon: GestureDetector(
               onTap: () => setState(
                   () => _obscureConfirm = !_obscureConfirm),
@@ -279,6 +264,88 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCguCheckbox(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _acceptedCgu
+            ? AppColors.secondaryLight
+            : AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+        border: Border.all(
+          color: _acceptedCgu
+              ? AppColors.secondaryMid
+              : AppColors.border,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () =>
+                setState(() => _acceptedCgu = !_acceptedCgu),
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: _acceptedCgu
+                    ? AppColors.secondary
+                    : AppColors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: _acceptedCgu
+                      ? AppColors.secondary
+                      : AppColors.textLight,
+                  width: 1.5,
+                ),
+              ),
+              child: _acceptedCgu
+                  ? const Icon(Icons.check_rounded,
+                      color: Colors.white, size: 16)
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: GoogleFonts.nunito(
+                  fontSize: 13,
+                  color: AppColors.textDark,
+                  height: 1.5,
+                ),
+                children: [
+                  const TextSpan(text: 'J\'ai lu et j\'accepte les '),
+                  WidgetSpan(
+                    child: GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const CguPage()),
+                      ),
+                      child: Text(
+                        'Conditions Générales d\'Utilisation',
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const TextSpan(
+                      text:
+                          ' et la politique de confidentialité de Cuisine Mada.'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
